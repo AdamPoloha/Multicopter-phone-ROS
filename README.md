@@ -98,6 +98,33 @@ Setup new connection:
   Quality: Poor
 Save and Start
 
-
-
-  ROS Melodic install instructions (http://wiki.ros.org/melodic/Installation/Ubuntu)
+Hardware Acceleration:
+Desktop (https://github.com/LinuxDroidMaster/Termux-Desktops/blob/main/Documentation/HardwareAcceleration.md)
+Mali (https://www.reddit.com/r/termux/comments/15jkts2/termux_prootdistro_anglevirgl_gpu_acceleration/)
+If you have a Snapdragon CPU with a 600 or 700 series Adreno GPU, you can use the Turnip Vulkan driver.
+Here I am using a Mali-G72 MP3 GPU and so will use the alternatives.
+Log out of Remmina session
+In the ssh ubuntu terminal window:
+  CTRL+C
+  exit
+In the same window, now ssh to Termux:
+  pkg install mesa-zink virglrenderer-mesa-zink vulkan-loader-android virglrenderer-android angle-android
+  cd ~/ubuntu-in-termux
+  nano ./startubuntu.sh
+  Under [unset LD_PRELOAD] line insert:
+#MESA_NO_ERROR=1 MESA_GL_VERSION_OVERRIDE=4.3COMPAT MESA_GLES_VERSION_OVERRIDE=3.2 GALLIUM_DRIVER=zink ZINK_DESCRIPTORS=lazy virgl_test_server --use-egl-surfaceless --use-gles &
+#virgl_test_server_android &
+virgl_test_server_android --angle-gl &
+#virgl_test_server_android --angle-vulkan &
+  Save
+  ./startubuntu.sh
+Now in Ubuntu:
+  nano ./startxvnc.sh
+  Before the [echo -e "${RED}\nStopping Xvfb\n${NC}"] line paste in [export DISPLAY=:0 GALLIUM_DRIVER=virpipe MESA_GL_VERSION_OVERRIDE=4.6COMPAT MESA_GLES_VERSION_OVERRIDE=3.2]
+  ./startxvnc.sh
+Reconnect with Remmina and open a new terminal window:
+  apt install glmark2
+  glmark2 (I got 54 fps using llvmpipe)
+  
+  
+ROS Melodic install instructions (http://wiki.ros.org/melodic/Installation/Ubuntu)
