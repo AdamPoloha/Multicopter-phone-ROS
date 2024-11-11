@@ -63,6 +63,7 @@ Follow guide on Termux Desktops (https://github.com/LinuxDroidMaster/Termux-Desk
 Ubuntu Proot (https://github.com/LinuxDroidMaster/Termux-Desktops/blob/main/Documentation/proot/ubuntu_proot.md)
 Ubuntu select version (https://github.com/MFDGaming/ubuntu-in-termux)
 Ubuntu Base releases (http://cdimages.ubuntu.com/ubuntu-base/releases/)
+Add tmp directory (https://www.reddit.com/r/termux/comments/wa6p4g/hardware_acceleration_in_proot/)
 XFCE install (https://github.com/LinuxDroidMaster/Termux-Desktops/blob/main/Documentation/proot/debian_proot.md#installing-desktops)
 VNC (https://gist.github.com/rikka0w0/895815ab1968a1be0f80f25e66fd61f5)
 Inside ssh session:
@@ -76,6 +77,7 @@ Inside ssh session:
   cd ./ubuntu-in-termux
   nano ./ubuntu.sh
   Modify [UBUNTU_VERSION='24.10'] line to the ubuntu version you desire (18.04.5)
+  After [command+=" -b /mnt"] insert [command+=" -b /data/data/com.termux/files/usr/tmp:/tmp"]
   chmod +x ubuntu.sh
   ./ubuntu.sh -y
   ./startubuntu.sh
