@@ -13,7 +13,13 @@ I will attempt to do it without root.
 
 Termux and ssh:
 Connect your phone to your wifi network.
-Enable USB debugging:
+Set static IP address:
+  Tap the Settings icon next to the current network
+  Tap View more
+  Choose IP settings
+  Pick Static
+  Type in the new IP address or keep current, and tap Save
+Enable USB debugging (If you want to use adb):
   Settings
   About phone
   Tap build number 10 times
@@ -36,6 +42,10 @@ Install Termux:
     Termux API
     Termux Boot (If it gets blocked, you can choose to install anyway)
     Termux Widget
+  Install Termux:X11:
+    Download Apk (https://github.com/termux/termux-x11/releases/tag/nightly)
+    Open the file
+    Tap Install
 Inside Termux:
   pkg upgrade
   pkg install openssh
@@ -47,7 +57,7 @@ Inside Termux:
 termux-wake-lock
 sshd
 Restart Phone
-If you wish to use USB for ssh, you can try to use and modify networkifyUSB-root.sh if you have root, otherwise you need to either set Default USB configuration in Developer options to USB tethering or RNDIS, or enable it manually each time
+If you wish to use USB for ssh, you can try to use and modify networkifyUSB-root.sh if you have root, otherwise you need to either set Default USB configuration in Developer options to USB tethering or RNDIS, or enable it manually each time.
 Inside Termux:
   passwd (set password for user) [copter]
   whoami (the ouput is the phone username) [u0_a248]
@@ -60,49 +70,39 @@ Inside Desktop Terminal:
 
 Termux Proot:
 Follow guide on Termux Desktops (https://github.com/LinuxDroidMaster/Termux-Desktops)
-Ubuntu Proot (https://github.com/LinuxDroidMaster/Termux-Desktops/blob/main/Documentation/proot/ubuntu_proot.md)
-Ubuntu select version (https://github.com/MFDGaming/ubuntu-in-termux)
-Ubuntu Base releases (http://cdimages.ubuntu.com/ubuntu-base/releases/)
-Add tmp directory (https://www.reddit.com/r/termux/comments/wa6p4g/hardware_acceleration_in_proot/)
 XFCE install (https://github.com/LinuxDroidMaster/Termux-Desktops/blob/main/Documentation/proot/debian_proot.md#installing-desktops)
-VNC (https://gist.github.com/rikka0w0/895815ab1968a1be0f80f25e66fd61f5)
 Inside ssh session:
   pkg update
   pkg upgrade
   pkg install x11-repo tur-repo
   pkg update
-  pkg install pulseaudio proot proot-distro wget git curl mc
+  pkg install termux-x11-nightly pulseaudio proot proot-distro wget git curl mc
   pkg install termux-api
-  git clone https://github.com/MFDGaming/ubuntu-in-termux.git
-  cd ./ubuntu-in-termux
-  nano ./ubuntu.sh
-  Modify [UBUNTU_VERSION='24.10'] line to the ubuntu version you desire (18.04.5)
-  After [command+=" -b /mnt"] insert [command+=" -b /data/data/com.termux/files/usr/tmp:/tmp"]
-  chmod +x ubuntu.sh
-  ./ubuntu.sh -y
-  ./startubuntu.sh
+  proot-distro install ubuntu-oldlts
+  proot-distro login ubuntu-oldlts
+Inside Ubuntu session:
   apt update 
   apt upgrade
-  apt install nano mc git wget curl
+  apt install dialog nano mc git wget curl
   apt install xfce4
+  exit
+Inside ssh session:
+  wget https://raw.githubusercontent.com/LinuxDroidMaster/Termux-Desktops/main/scripts/proot_debian/startxfce4_debian.sh
+  mv ./startxfce4_debian.sh ./startxfce4_ubuntu.sh
+  nano ./startxfce4_ubuntu.sh
+  Modify [proot-distro login debian --shared-tmp -- /bin/bash -c  'export PULSE_SERVER=127.0.0.1 && export XDG_RUNTIME_DIR=${TMPDIR} && su - droidmaster -c "env DISPLAY=:0 startxfce"'] line to [proot-distro login ubuntu-oldlts --shared-tmp -- /bin/bash -c  'export PULSE_SERVER=127.0.0.1 && export XDG_RUNTIME_DIR=${TMPDIR} && DISPLAY=:0 startxfce4']
+  chmod +x ./startxfce4_ubuntu.sh
+  ./startxfce4_ubuntu.sh
+Logout of ubuntu session on phone
+  proot-distro login ubuntu-oldlts
+Inside Ubuntu terminal session:
   apt install xvfb x11vnc
   wget https://raw.githubusercontent.com/AdamPoloha/Multicopter-phone-ROS/refs/heads/main/startxvnc.sh
   chmod +x ./startxvnc.sh
   ./startxvnc.sh
-On your desktop open Remmina
-Setup new connection:
-  Name: PhoneDrone
-  Protocol: VNC
-  Server: ipaddress [192.168.121.70]
-  Username: username [u0_a248]
-  User password: password [copter]
-  Colour Depth: High Colour
-  Quality: Poor
-Save and Start
 
 Hardware Acceleration:
 Desktop (https://github.com/LinuxDroidMaster/Termux-Desktops/blob/main/Documentation/HardwareAcceleration.md)
-Mali (https://www.reddit.com/r/termux/comments/15jkts2/termux_prootdistro_anglevirgl_gpu_acceleration/)
 If you have a Snapdragon CPU with a 600 or 700 series Adreno GPU, you can use the Turnip Vulkan driver.
 Here I am using a Mali-G72 MP3 GPU and so will use the alternatives.
 Log out of Remmina session
@@ -110,23 +110,35 @@ In the ssh ubuntu terminal window:
   CTRL+C
   exit
 In the same window, now ssh to Termux:
-  pkg install mesa-zink virglrenderer-mesa-zink vulkan-loader-android virglrenderer-android angle-android
-  cd ~/ubuntu-in-termux
-  nano ./startubuntu.sh
-  Under [unset LD_PRELOAD] line insert:
+  pkg install mesa-zink virglrenderer-mesa-zink vulkan-loader-android virglrenderer-android
+  ZINK:
+    MESA_NO_ERROR=1 MESA_GL_VERSION_OVERRIDE=4.3COMPAT MESA_GLES_VERSION_OVERRIDE=3.2 GALLIUM_DRIVER=zink ZINK_DESCRIPTORS=lazy virgl_test_server --use-egl-surfaceless --use-gles &
+  VIRGL:
+    virgl_test_server_android &
+  ./startxfce4_ubuntu.sh
+Inside Termux:X11 session terminal:
+  apt install glmark2
+  glmark2 (Runs on cpu) [50fps for me]
+  GALLIUM_DRIVER=virpipe MESA_GL_VERSION_OVERRIDE=4.0 glmark2 (Runs on gpu) [40fps for me on ZINK, 52fps on VIRGL]
+Logout
+In ssh to Termux:
+  cp ./startxfce4_ubuntu.sh ./startubuntuVNC.sh
+  nano ./startubuntuVNC.sh
+  Under [pulseaudio --start...] line insert:
+#Start graphics server
 #MESA_NO_ERROR=1 MESA_GL_VERSION_OVERRIDE=4.3COMPAT MESA_GLES_VERSION_OVERRIDE=3.2 GALLIUM_DRIVER=zink ZINK_DESCRIPTORS=lazy virgl_test_server --use-egl-surfaceless --use-gles &
-#virgl_test_server_android &
-virgl_test_server_android --angle-gl &
-#virgl_test_server_android --angle-vulkan &
+virgl_test_server_android &
+  Modify [proot-distro login ubuntu-oldlts --shared-tmp -- /bin/bash -c  'export PULSE_SERVER=127.0.0.1 && export XDG_RUNTIME_DIR=${TMPDIR} && DISPLAY=:0 startxfce4'] line to [proot-distro login ubuntu-oldlts --shared-tmp -- /bin/bash -c  'export PULSE_SERVER=127.0.0.1 && export XDG_RUNTIME_DIR=${TMPDIR} && cd ~ && ./startxvnc.sh']
   Save
-  ./startubuntu.sh
+  proot-distro login ubuntu-oldlts
 Now in Ubuntu:
   nano ./startxvnc.sh
-  Before the [echo -e "${RED}\nStopping Xvfb\n${NC}"] line paste in [export DISPLAY=:0 GALLIUM_DRIVER=virpipe MESA_GL_VERSION_OVERRIDE=4.6COMPAT MESA_GLES_VERSION_OVERRIDE=3.2]
-  ./startxvnc.sh
-Reconnect with Remmina and open a new terminal window:
-  apt install glmark2
-  glmark2 (I got 54 fps using llvmpipe)
-  
-  
-ROS Melodic install instructions (http://wiki.ros.org/melodic/Installation/Ubuntu)
+  Instead of the [export DISPLAY=:0] line paste in [export DISPLAY=:0 GALLIUM_DRIVER=virpipe MESA_GL_VERSION_OVERRIDE=4.0]
+  exit
+In ssh to Termux:
+  ./startubuntuVNC.sh
+Connect with Remmina
+
+Install ROS:
+Check ROS2 release for Ubuntu 22.04 (https://docs.ros.org/en/rolling/Releases.html)
+ROS Humble install instructions (https://docs.ros.org/en/humble/Installation/Ubuntu-Install-Debs.html)
