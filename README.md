@@ -47,6 +47,7 @@ Install Termux:
     Open the file
     Tap Install
 Inside Termux:
+  pkg update
   pkg upgrade
   pkg install openssh
   Follow ssh example (https://github.com/termux/termux-boot)
@@ -56,7 +57,7 @@ Inside Termux:
 #!/data/data/com.termux/files/usr/bin/sh
 termux-wake-lock
 sshd
-Restart Phone
+%Restart Phone
 If you wish to use USB for ssh, you can try to use and modify networkifyUSB-root.sh if you have root, otherwise you need to either set Default USB configuration in Developer options to USB tethering or RNDIS, or enable it manually each time.
 Inside Termux:
   passwd (set password for user) [copter]
@@ -133,7 +134,7 @@ virgl_test_server_android &
   proot-distro login ubuntu-oldlts
 Now in Ubuntu:
   nano ./startxvnc.sh
-  Instead of the [export DISPLAY=:0] line paste in [export DISPLAY=:0 GALLIUM_DRIVER=virpipe MESA_GL_VERSION_OVERRIDE=4.0]
+  Instead of the [export DISPLAY=:0] line paste in [export DISPLAY=:0 GALLIUM_DRIVER=virpipe MESA_GL_VERSION_OVERRIDE=4.0] (Will run desktop with gpu, may cause window manager and taskbar issues, neither would draw but a new taskbar could be created)
   exit
 In ssh to Termux:
   ./startubuntuVNC.sh
@@ -142,3 +143,16 @@ Connect with Remmina
 Install ROS:
 Check ROS2 release for Ubuntu 22.04 (https://docs.ros.org/en/rolling/Releases.html)
 ROS Humble install instructions (https://docs.ros.org/en/humble/Installation/Ubuntu-Install-Debs.html)
+From Remmina or ssh ubuntu console:
+  wget https://raw.githubusercontent.com/AdamPoloha/Multicopter-phone-ROS/refs/heads/main/README.md (Download this readme if you want to copy and paste commands)
+  apt install software-properties-common
+  add-apt-repository universe
+  curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg
+  echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $(. /etc/os-release && echo $UBUNTU_CODENAME) main" | tee /etc/apt/sources.list.d/ros2.list > /dev/null
+  apt update
+  apt upgrade
+  apt install ros-humble-desktop
+  apt install ros-dev-tools
+  nano ~/.bashrc
+  At the end of the file paste in [source /opt/ros/humble/setup.bash]
+  Logout
