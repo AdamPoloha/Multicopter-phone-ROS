@@ -156,3 +156,31 @@ From Remmina or ssh ubuntu console:
   nano ~/.bashrc
   At the end of the file paste in [source /opt/ros/humble/setup.bash]
   Logout
+
+Install Firefox:
+Snapless (https://askubuntu.com/questions/1399383/how-to-install-firefox-as-a-traditional-deb-package-without-snap-in-ubuntu-22)
+Terminal:
+  add-apt-repository ppa:mozillateam/ppa
+  echo '
+Package: *
+Pin: release o=LP-PPA-mozillateam
+Pin-Priority: 1001
+
+Package: firefox
+Pin: version 1:1snap*
+Pin-Priority: -1
+' | tee /etc/apt/preferences.d/mozilla-firefox
+  apt install firefox
+
+Drone package:
+Make Package (https://docs.ros.org/en/eloquent/Tutorials/Creating-Your-First-ROS2-Package.html)
+SJTU Drone ROS2 (https://github.com/NovoG93/sjtu_drone)
+Terminal:
+  mkdir ~/ros2_ws
+  mkdir ~/ros2_ws/src
+  cd ~/ros2_ws/src
+  ros2 pkg create --build-type ament_python --node-name hello_node phone_drone
+  cd ~/ros2_ws
+  colcon build
+  . install/setup.bash
+  ros2 run phone_drone hello_node
