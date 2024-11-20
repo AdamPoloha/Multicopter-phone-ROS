@@ -57,6 +57,7 @@ Inside Termux:
 #!/data/data/com.termux/files/usr/bin/sh
 termux-wake-lock
 sshd
+  chmod +x ~/.termux/boot/start-sshd
 %Restart Phone
 If you wish to use USB for ssh, you can try to use and modify networkifyUSB-root.sh if you have root, otherwise you need to either set Default USB configuration in Developer options to USB tethering or RNDIS, or enable it manually each time.
 Inside Termux:
@@ -184,3 +185,78 @@ Terminal:
   colcon build
   . install/setup.bash
   ros2 run phone_drone hello_node
+
+Sensors:
+You can check which sensors the Android system provides, you can try to get the raw sensor data, but it is interesting to use what the system already provides as in some cases the result is very good and optimised for a low computational impact. Not all software sensors actually provide any data.
+Android Sensors (https://developer.android.com/develop/sensors-and-location/sensors/sensors_overview)
+Position Sensors (https://developer.android.com/develop/sensors-and-location/sensors/sensors_position)
+Make a ROS2 node (https://industrial-training-dev.readthedocs.io/en/latest/_source/session1/ros2/3-Creating-a-ROS-Package-and-Node.html)
+Android Terminal:
+  termux-sensor -l (lists hardware and software sensors)
+  termux-sensor -s "sensor_name" (check what data you can get from the sensor)
+  CTRL+C to stop the program
+What I got on OPPO A91, mapped to what each sensor gave me:
+  "bmi160 ACCELEROMETER", [X,Y,Z] (m/s^2)
+  "akm09915 MAGNETOMETER",[X,Y,Z] (untested units)
+  "ORIENTATION", -> "DEVICE_ORIENTATION"
+  "bmi160 GYROSCOPE", [X,Y,Z] (Probably radians/s)
+  "tcs3701 LIGHT", [16 Values, 3 Active, Mosly 1 Relevant] (Screen side)
+  "tcs3701 PROXIMITY", [3 Values, 1 Active] (Screen side, either 5 at distance or 0 when close)
+  "UNCALI_MAG", [6 Values, 3 Active, X,Y,Z]
+  "UNCALI_GYRO", [6 Values, X,Y,Z, and 3 constants] (Constant are probably some initial offset, different every run)
+  "SIGNIFICANT_MOTION", [Always empty]
+  "STEP_DETECTOR", [I got either empty or One Value = 1]
+  "STEP_DETECTOR_WAKEUP", Same as "STEP_DETECTOR" at first glance
+  "STEP_COUNTER", [One Value] (Precision is 10 steps)
+  "WAKE_GESTURE", [Empty]
+  "GLANCE_GESTURE", [Empty]
+  "DEVICE_ORIENTATION", [One Value] (Probably screen orientation, landscape/portrait)
+  "STATIONARY_DETECT", [Empty]
+  "MOTION_DETECT", [Empty]
+  "IN_POCKET", [Empty]
+  "UNCALI_ACC", [6 Values, 3 Active, X,Y,Z] (m/s^2)
+  "FLAT", [Empty]
+  "CAMERA_PROTECT", [Empty]
+  "FREE_FALL", [Empty]
+  "PICKUP_DETECT", [Empty -> 16 Values, 2 Active] (No clue what they mean)
+  "LUX_AOD", [16 Values, similar to pickup, but 4 are Active]
+  "PEDO_MINUTE", [Empty] (How many minutes has a pedo been watching you)
+  "TP_GESTURE", [16 Values] (Do not want to analyse)
+  "OPPO_ACTIVITY_RECOGNITION", [16 Values]
+  "OPLUS Fusion Light Sensor", [16 Values, 2 Relevant] (First probably raw, second calculated same as "tcs3701 LIGHT")
+  "Game Rotation Vector Sensor", [X,Y,Z,W] (Should be Gyro Integrated Quaternion)
+  "GeoMag Rotation Vector Sensor", [5 Values, X,Y,Z,W,0] (Magnetometer/Compass Quaternion)
+  "Gravity Sensor", [X,Y,Z] (Gravity extracted from Accelerometer)
+  "Linear Acceleration Sensor", [X,Y,Z] (Gravity removed from Accelerometer)
+  "Rotation Vector Sensor", -> "Game Rotation Vector Sensor"
+  "Orientation Sensor", [Y,P,R] (Degrees, should have some sensor fusion)
+Approaches:
+  RAW (Handle everything later)
+  Filtered+Integrated (Trust Android data and can use it well)
+  Fused (Use fused orientation and possibly use Linear acceleration with gravity removed right away)
+I will go with Filtered method as accelerometer will likely be unusable even without gravity, and I can write my own simple switching between Game and GeoMag rotation vectors.
+You could send everything to ROS, but will likely not be able to run fast.
+Android Terminal:
+  pkg install netcat-openbsd
+  cd ~
+  wget https://raw.githubusercontent.com/AdamPoloha/Multicopter-phone-ROS/refs/heads/main/sensor.sh
+  nano ~/sensor.sh
+  Modify [termux-sensor -s] line:
+termux-sensor -s "sensor1","sensor2" -d [time period in ms between updates] | nc 127.0.0.1 1234
+  Mine: termux-sensor -s "Game Rotation Vector Sensor","GeoMag Rotation Vector Sensor","bmi160 GYROSCOPE","bmi160 ACCELEROMETER","akm09915 MAGNETOMETER" -d 1 | nc 127.0.0.1 1234
+  chmod +x ~/sensor.sh
+  termux-sensor -s "sensor1","sensor2" -d [time period in ms between updates]
+  You will want to know the ordering of the data, mine: Mag, Acc, Geo, Gyro, Game 
+  cp ~/sensor.sh ~/.termux/boot/sensor.sh
+  Or mkdir ~/.shortcuts && cp ~/sensor.sh ~/.shortcuts/sensor.sh (For use with Termux Widget)
+Once you have it running, by restarting, widget, or terminal, you can open Ubuntu
+Ubuntu Terminal:
+  cd ~/ros2_ws/src/phone_drone/phone_drone
+  wget https://raw.githubusercontent.com/AdamPoloha/Multicopter-phone-ROS/refs/heads/main/phone_sensor_publisher_node.py
+  apt install geany
+  geany ../setup.py
+  Add new entry point to console_scripts
+'phone_sensor_publisher_node = phone_drone.phone_sensor_publisher_node.py'
+  geany ./phone_sensor_publisher_node.py
+  Relpace [import rospy] with [import rclpy]
+  Put loose code into main(), and after if __name__ == __main__, run main() 
